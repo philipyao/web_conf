@@ -42,26 +42,29 @@
                 </Form>
             </div>
             <div slot="footer">
-                <Button type="primary" @click="editSubmit('editForm')">提交</Button>
+                <Button type="primary" @click="editSubmit('editForm')">确定</Button>
                 <Button type="ghost" @click="editCancel()" style="margin-left: 8px">取消</Button>
             </div>
         </Modal>
 
         <!-- 发布对话框 -->
-        <Modal v-model="editUpdateModal" title="编辑发布信息" width="800">
-            <div>
-                <div style="margin-bottom: 24px; display: flex;">
-                    <div style="border: 1px solid black">
-                        <label>变动起来</label>                 
-                    </div>
-                    <div style="margin-left:80px; border: 1px solid black">
-                        <Table :columns="tblChanges" :data="changesData"></Table>
-                    </div>
+        <Modal v-model="editUpdateModal" title="编辑发布信息" width="1000">
+            <div style="margin-bottom: 24px; display: flex;">
+                <div style="border: 1px solid black">
+                    <label>变动起来</label>                 
                 </div>
-                <Form ref="editUpdate" :model="editUpdate" :label-width="80" >
-                    <Form-item label="发布标题" style="border: 1px solid black">
+                <div style="border: 1px solid black">
+                    <Table :columns="tblChanges" :data="changesData"></Table>
+                </div>
+            </div>            
+            <div>
+                <Form ref="editUpdate" :model="editUpdate" :label-width="80" :rules="ruleUpdateValidate">
+                    <Form-item label="发布标题" prop="name">
                         <Input v-model="editUpdate.name" ></Input>
                     </Form-item>
+                    <Form-item label="发布人" prop="author">
+                        <Input v-model="editUpdate.author" ></Input>
+                    </Form-item>                    
                     <Form-item label="发布说明" :rows="4">
                         <Input v-model="editUpdate.comment" type="textarea"></Input>
                     </Form-item>
@@ -102,23 +105,23 @@
                     {
                         title: '命名空间',
                         key: 'namespace',
+                        width: 120,
                     },                
                     {
                         title: '配置名',
                         key: 'key',
+                        width: 150,
                     },
                     {
                         title: '发布前值',
-                        key: 'old_value',
+                        key: 'oldvalue',
+                        width: 250,
                     },
                     {
                         title: '发布后值',
                         key: 'value',
+                        width: 250,
                     },
-                    {
-                        title: '作者',
-                        key: 'author',
-                    },    
                 ],
 
                 tblColumns: [
@@ -218,7 +221,15 @@
                     value: [
                         { required: true, message: '请设置配置的值！', trigger: 'blur' }
                     ],
-                },                
+                },
+                ruleUpdateValidate: {
+                    name: [
+                        { required: true, message: '请填写发布的标题！', trigger: 'blur' }
+                    ],
+                    author: [
+                        { required: true, message: '请填写发布人！', trigger: 'blur' }
+                    ],                    
+                },                           
             }
     	},
     	methods: {
@@ -277,7 +288,73 @@
                 this.editModal = false;
             },
             editUpdateSubmit(name) {
-                this.editUpdateModal = false
+                console.log("editUpdateSubmit：%o", name);
+                this.$refs[name].validate((valid) => {
+                    console.log("editUpdateSubmit：%o", valid);
+                    if (valid) {
+                        console.log("editUpdateSubmit：valid!")
+                        if (this.changesData.length == 0) {
+                            this.$Message.error("没有修改");
+                            return;
+                        }
+
+                        this.editUpdateModal = false;
+
+                        var reqpkg = {
+                            name: this.editUpdate.name,
+                            author: this.editUpdate.author,
+                            comment: this.editUpdate.comment,
+                        }
+                        reqpkg.updates = [];
+                        for (var i = 0; i < this.changesData.length; i++) {
+                            reqpkg.updates.push({
+                                id: this.changesData[i].id,
+                                value: this.changesData[i].value,
+                                version: this.changesData[i].version,
+                            });
+                        }
+                        this.$jsonHttp.post('/api/update', reqpkg).then((response) => {
+                            if (response.status != 200) {
+                              this.$Message.error("失败：%d %s", response.status, response.statusText)
+                              console.error("失败：%d %s", response.status, response.statusText)
+                              return
+                            }
+                            var succ_cnt = 0;
+                            var fail_cnt = 0;
+                            console.log(response.data)
+                            if (Array.isArray(response.data.entries)) {
+                                succ_cnt = response.data.entries.length;
+                                for (var i = 0; i < succ_cnt; i++) {
+                                    var entry = response.data.entries[i];
+                                    for (var j = 0; j < this.tblData.length; j++) {
+                                        if (this.tblData[j].id == entry.id) {
+                                            console.log("update ", entry.id);
+                                            this.tblData[j].value = entry.value;
+                                            this.tblData[j].oldvalue = this.tblData[j].value;
+                                            this.tblData[j].version = entry.version;
+                                            this.tblData[j].updated = entry.updated;
+                                            break
+                                        }
+                                    }
+                                }          
+                            }
+                            if (Array.isArray(response.data.errmsgs)) {
+                                fail_cnt = response.data.errmsgs.length;
+                                for (var i = 0; i < fail_cnt; i++) {
+                                    var errmsg = response.data.errmsgs[i];
+                                    console.log(errmsg);
+                                }
+                            }                
+                            this.$Message.info("成功: ", succ_cnt, " / ", succ_cnt + fail_cnt);
+                        }).catch((error) => {
+                            this.$Message.error(error)
+                            console.log(error)
+                        })         
+                    } else {
+                        console.log("failed!")
+                        this.$Message.error('发布信息有错误，请更正!');
+                    }
+                })                
             },
             editUpdateCancel() {
                 this.editUpdateModal = false
@@ -290,59 +367,26 @@
                 }
             },
             showUpdate() {
+                this.changesData = [];
+                for (var i = 0; i < this.tblData.length; i++) {
+                    var row = this.tblData[i];
+                    if (row.value != row.oldvalue) {
+                        this.changesData.push({
+                            id: row.id,
+                            namespace: row.namespace,
+                            key: row.key,
+                            value: row.value,
+                            oldvalue: row.oldvalue,
+                            version: row.version,
+                        })
+                        console.log("change for ", row.id);
+                    }
+                }
+                if (this.changesData.length == 0) {
+                    this.$Message.error('没有修改可供发布，请确认!');
+                    return;
+                }                
                 this.editUpdateModal = true;
-
-                // var updates = [];
-                // for (var i = 0; i < this.tblData.length; i++) {
-                //     if (this.tblData[i].value !== this.tblData[i].oldvalue) {
-                //         updates.push({
-                //             id: this.tblData[i].id,
-                //             value: this.tblData[i].value,
-                //         });
-                //     }
-                // }
-                // console.log("updates: ", updates)
-                // if (updates.length == 0) {
-                //     this.$Message.error("没有修改")
-                //     return
-                // }
-                // this.$jsonHttp.post('/api/update', {updates: updates}).then((response) => {
-                //     if (response.status != 200) {
-                //       this.$Message.error("失败：%d %s", response.status, response.statusText)
-                //       console.error("失败：%d %s", response.status, response.statusText)
-                //       return
-                //     }
-                //     var succ_cnt = 0;
-                //     var fail_cnt = 0;
-                //     console.log(response.data)
-                //     if (Array.isArray(response.data.entries)) {
-                //         succ_cnt = response.data.entries.length;
-                //         for (var i = 0; i < succ_cnt; i++) {
-                //             var entry = response.data.entries[i];
-                //             for (var j = 0; j < this.tblData.length; j++) {
-                //                 if (this.tblData[j].id == entry.id) {
-                //                     console.log("update ", entry.id);
-                //                     this.tblData[j].value = entry.value;
-                //                     this.tblData[j].oldvalue = this.tblData[j].value;
-                //                     this.tblData[j].version = entry.version;
-                //                     this.tblData[j].updated = entry.updated;
-                //                     break
-                //                 }
-                //             }
-                //         }          
-                //     }
-                //     if (Array.isArray(response.data.errmsgs)) {
-                //         fail_cnt = response.data.errmsgs.length;
-                //         for (var i = 0; i < fail_cnt; i++) {
-                //             var errmsg = response.data.errmsgs[i];
-                //             console.log(errmsg);
-                //         }
-                //     }                
-                //     this.$Message.info("成功: %d / %d", succ_cnt, succ_cnt + fail_cnt);
-                // }).catch((error) => {
-                //     this.$Message.error(error)
-                //     console.log(error)
-                // })                  
             },
             handleReset() {
                 this.$Message.info('reset!');
