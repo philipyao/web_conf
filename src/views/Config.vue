@@ -1,7 +1,7 @@
 <style type="text/css">
     .ivu-table .table-change-row td{
-        background-color: #2db7f5;
-        color: #fff;
+        background-color:  #fff8dc;
+        color: #000;
     }
 </style>
 
@@ -15,7 +15,11 @@
                 取消修改
             </Button>            
         </div>
-
+        <div style="height: 60px; padding: 10px 30px 20px 0; display:flex; justify-content:flex-end;">
+            <Button type="primary" @click="showNew">
+                新增配置
+            </Button>       
+        </div>
         <Table :row-class-name="rowClassName" :columns="tblColumns" :data="tblData" border highlight-row ></Table>   
         <div style="margin: 30px 10px;overflow: hidden">
             <div style="float: right;">
@@ -47,8 +51,32 @@
             </div>
         </Modal>
 
+        <!--新增配置 Modal 对话框-->
+        <Modal v-model="editModalNew" title="新增配置" >
+            <div>
+                <Form ref="editFormNew" :model="editFormNew" :rules="ruleValidateNew" :label-width="80">
+                    <Form-item label="命名空间" prop="namespace">
+                        <Input v-model="editFormNew.namespace" ></Input>
+                    </Form-item>
+                    <Form-item label="键" prop="key">
+                        <Input v-model="editFormNew.key" ></Input>
+                    </Form-item>
+                    <Form-item label="值" prop="value" :rows="4">
+                        <Input v-model="editFormNew.value" placeholder="请填写值..." required></Input>
+                    </Form-item>
+                    <Form-item label="备注">
+                        <Input v-model="editFormNew.desc" type="textarea" :autosize="{minRows: 1,maxRows: 2}"></Input>
+                    </Form-item>
+                </Form>
+            </div>
+            <div slot="footer">
+                <Button type="primary" @click="editSubmitNew('editFormNew')">确定</Button>
+                <Button type="ghost" @click="editCancelNew()" style="margin-left: 8px">取消</Button>
+            </div>
+        </Modal>
+
         <!-- 发布对话框 -->
-        <Modal v-model="editUpdateModal" title="编辑发布信息" width="1000">
+        <Modal v-model="editChangeModal" title="编辑发布信息" width="1000">
             <div style="margin-bottom: 24px; display: flex;">
                 <div style="border: 1px solid black">
                     <label>变动起来</label>                 
@@ -58,21 +86,21 @@
                 </div>
             </div>            
             <div>
-                <Form ref="editUpdate" :model="editUpdate" :label-width="80" :rules="ruleUpdateValidate">
+                <Form ref="editChange" :model="editChange" :label-width="80" :rules="ruleUpdateValidate">
                     <Form-item label="发布标题" prop="name">
-                        <Input v-model="editUpdate.name" ></Input>
+                        <Input v-model="editChange.name" ></Input>
                     </Form-item>
                     <Form-item label="发布人" prop="author">
-                        <Input v-model="editUpdate.author" ></Input>
+                        <Input v-model="editChange.author" ></Input>
                     </Form-item>                    
                     <Form-item label="发布说明" :rows="4">
-                        <Input v-model="editUpdate.comment" type="textarea"></Input>
+                        <Input v-model="editChange.comment" type="textarea"></Input>
                     </Form-item>
                 </Form>
             </div>
             <div slot="footer">
-                <Button type="primary" @click="editUpdateSubmit('editUpdate')">发布</Button>
-                <Button type="ghost" @click="editUpdateCancel()" style="margin-left: 8px">取消</Button>
+                <Button type="primary" @click="editChangeSubmit('editChange')">发布</Button>
+                <Button type="ghost" @click="editChangeCancel()" style="margin-left: 8px">取消</Button>
             </div>
         </Modal>
 
@@ -96,8 +124,11 @@
                 //编辑 modal
                 editModal: false,
 
-                editUpdate: {},
-                editUpdateModal: false,
+                editChange: {},
+                editChangeModal: false,
+
+                editFormNew: {},
+                editModalNew: false,
 
                 changesData: [],
 
@@ -131,7 +162,13 @@
                     },       
                     {
                         title: 'ID',
-                        key: 'id',
+                        render: (h, params) => {
+                            if (params.row.isnew == true) {
+                                return h('span', "-");
+                            } else {
+                                return h('span', params.row.id + "");                                
+                            }
+                        },
                         width: 70,
                         sortable: true,
                     },
@@ -154,7 +191,13 @@
                     },   
                     {
                         title: '当前版本',
-                        key: 'version',
+                        render: (h, params) => {
+                            if (params.row.isnew == true) {
+                                return h('span', "-");
+                            } else {
+                                return h('span', params.row.version + "");                                
+                            }
+                        },
                         width: 120,
                         sortable: true,
                     },                                                                                 
@@ -163,6 +206,9 @@
                         key: 'updated',
                         width: 150,
                         render: (h, params) => {
+                            if (params.row.isnew == true) {
+                                return h('span', "-");
+                            }
                             var d = new Date(0); // The 0 there is the key, which sets the date to the epoch
                             d.setUTCSeconds(params.row.updated);
                             return h('span', moment(d).format('YYYY-MM-DD HH:mm:ss'));
@@ -173,6 +219,9 @@
                         key: 'created',
                         width: 150,
                         render: (h, params) => {
+                            if (params.row.isnew == true) {
+                                return h('span', "-");
+                            }                            
                             var d = new Date(0); // The 0 there is the key, which sets the date to the epoch
                             d.setUTCSeconds(params.row.created);
                             return h('span', moment(d).format('YYYY-MM-DD HH:mm:ss'));
@@ -229,7 +278,18 @@
                     author: [
                         { required: true, message: '请填写发布人！', trigger: 'blur' }
                     ],                    
-                },                           
+                },
+                ruleValidateNew: {
+                    namespace: [
+                        { required: true, message: '请设置配置的命名空间！', trigger: 'blur' }
+                    ],
+                    key: [
+                        { required: true, message: '请设置配置的键！', trigger: 'blur' }
+                    ],                                        
+                    value: [
+                        { required: true, message: '请设置配置的值！', trigger: 'blur' }
+                    ],
+                },                
             }
     	},
     	methods: {
@@ -245,6 +305,7 @@
                         for (var i = 0; i < response.data.entries.length; i++) {
                             var entry = response.data.entries[i];
                             var config = {
+                                isnew: false,
                                 id: entry.id,
                                 namespace: entry.namespace,
                                 key: entry.key,
@@ -287,33 +348,39 @@
             editCancel() {
                 this.editModal = false;
             },
-            editUpdateSubmit(name) {
-                console.log("editUpdateSubmit：%o", name);
+            editChangeSubmit(name) {
                 this.$refs[name].validate((valid) => {
-                    console.log("editUpdateSubmit：%o", valid);
                     if (valid) {
-                        console.log("editUpdateSubmit：valid!")
                         if (this.changesData.length == 0) {
                             this.$Message.error("没有修改");
                             return;
                         }
 
-                        this.editUpdateModal = false;
+                        this.editChangeModal = false;
 
                         var reqpkg = {
-                            name: this.editUpdate.name,
-                            author: this.editUpdate.author,
-                            comment: this.editUpdate.comment,
+                            name: this.editChange.name,
+                            author: this.editChange.author,
+                            comment: this.editChange.comment,
                         }
                         reqpkg.updates = [];
+                        reqpkg.adds = [];
                         for (var i = 0; i < this.changesData.length; i++) {
-                            reqpkg.updates.push({
-                                id: this.changesData[i].id,
-                                value: this.changesData[i].value,
-                                version: this.changesData[i].version,
-                            });
+                            if (this.changesData[i].isnew == true) {
+                                reqpkg.adds.push({
+                                    namespace: this.changesData[i].namespace,
+                                    key: this.changesData[i].key,
+                                    value: this.changesData[i].value,
+                                });    
+                            } else {
+                                reqpkg.updates.push({
+                                    id: this.changesData[i].id,
+                                    value: this.changesData[i].value,
+                                    version: this.changesData[i].version,
+                                });                                
+                            }
                         }
-                        this.$jsonHttp.post('/api/update', reqpkg).then((response) => {
+                        this.$jsonHttp.post('/api/change', reqpkg).then((response) => {
                             if (response.status != 200) {
                               this.$Message.error("失败：%d %s", response.status, response.statusText)
                               console.error("失败：%d %s", response.status, response.statusText)
@@ -327,13 +394,24 @@
                                 for (var i = 0; i < succ_cnt; i++) {
                                     var entry = response.data.entries[i];
                                     for (var j = 0; j < this.tblData.length; j++) {
-                                        if (this.tblData[j].id == entry.id) {
-                                            console.log("update ", entry.id);
-                                            this.tblData[j].value = entry.value;
-                                            this.tblData[j].oldvalue = this.tblData[j].value;
-                                            this.tblData[j].version = entry.version;
-                                            this.tblData[j].updated = entry.updated;
-                                            break
+                                        var data = this.tblData[j]
+                                        if (data.namespace == entry.namespace && data.key == entry.key) {
+                                            if (data.isnew == true) {
+                                                data.isnew = false;
+                                                data.id = entry.id;
+                                                data.value = entry.value;
+                                                data.oldvalue = data.value;
+                                                //comment
+                                                data.version = entry.version;
+                                                data.updated = entry.updated;
+                                                data.created = entry.created;
+                                            } else {
+                                                data.value = entry.value;
+                                                data.oldvalue = data.value;
+                                                data.version = entry.version;
+                                                data.updated = entry.updated;
+                                            }
+                                            break   
                                         }
                                     }
                                 }          
@@ -345,10 +423,10 @@
                                     console.log(errmsg);
                                 }
                             }                
-                            this.$Message.info("成功: ", succ_cnt, " / ", succ_cnt + fail_cnt);
+                            this.$Message.info("成功: " + succ_cnt + " / " + (succ_cnt + fail_cnt));
                         }).catch((error) => {
-                            this.$Message.error(error)
-                            console.log(error)
+                            this.$Message.error(error);
+                            console.log("jsonHttp catch error", error);
                         })         
                     } else {
                         console.log("failed!")
@@ -356,9 +434,35 @@
                     }
                 })                
             },
-            editUpdateCancel() {
-                this.editUpdateModal = false
+            editChangeCancel() {
+                this.editChangeModal = false
             },
+
+            editSubmitNew(name) {
+                this.$refs[name].validate((valid) => {
+                    if (valid) {
+                        this.editModalNew = false;
+                        var config = {
+                            isnew: true,
+                            id: 0,
+                            namespace: this.editFormNew.namespace,
+                            key: this.editFormNew.key,
+                            value: this.editFormNew.value,
+                            oldvalue: "",
+                            comment: this.editFormNew.desc,
+                            version: 0,
+                            updated: 0,
+                            created: 0,
+                        }
+                        this.tblData.unshift(config);                        
+                    } else {
+                        this.$Message.error('新增配置有错误，请更正!');
+                    }
+                })
+            },
+            editCancelNew() {
+                this.editModalNew = false;
+            },            
             rowClassName (row, index) {
                 if (row.value != row.oldvalue) {
                     return 'table-change-row';
@@ -372,6 +476,7 @@
                     var row = this.tblData[i];
                     if (row.value != row.oldvalue) {
                         this.changesData.push({
+                            isnew: row.isnew,
                             id: row.id,
                             namespace: row.namespace,
                             key: row.key,
@@ -379,17 +484,25 @@
                             oldvalue: row.oldvalue,
                             version: row.version,
                         })
-                        console.log("change for ", row.id);
                     }
                 }
                 if (this.changesData.length == 0) {
                     this.$Message.error('没有修改可供发布，请确认!');
                     return;
                 }                
-                this.editUpdateModal = true;
+                this.editChangeModal = true;
             },
             handleReset() {
-                this.$Message.info('reset!');
+                for (var i = 0; i < this.tblData.length; i++) {
+                    var row = this.tblData[i];
+                    row.value = row.oldvalue;
+                }
+                this.changesData = [];
+                this.$Message.info('已撤销所有修改');
+            },
+
+            showNew() {
+                this.editModalNew = true;
             },
     	},
         mounted() {
