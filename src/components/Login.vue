@@ -60,26 +60,30 @@
                     this.$formHttp.post('/api/login', this.formLogin).then((response) => {
                         console.log(response)
                         if (response.status != 200) {
-                          this.$Message.error("登录失败：%d %s", response.status, response.statusText)
-                          return
+                          this.$Message.error("登录失败：", response.status, response.statusText);
+                          return;
                         }
-                        this.$Message.success('登录成功')
-                        window.localStorage.setItem('userInfo', JSON.stringify(response.data.userinfo))
-                        let routes = []
+                        if (response.data.errmsg != "") {
+                          this.$Message.error("登录失败：", response.data.errmsg);
+                          return;
+                        }
+                        this.$Message.success('登录成功');
+                        
+                        let routes = [];
                         routes.push({
                           path: '*',
                           name: 'notfound',
                           component: resolve => require(['@/components/NotFound'], resolve)
-                        })
-                        this.$router.addRoutes(routes)
+                        });
+                        this.$router.addRoutes(routes);
                         //返回主页
-                        this.$router.push('/config')
+                        this.$router.push('/config');
                     }).catch((error) => {
-                        this.$Message.error(error)
-                        console.log(error)
+                        this.$Message.error("请求登录错误", error);
+                        console.log(error);
                     })
                 } else {
-                    this.$Message.error('表单验证失败!')
+                    this.$Message.error('信息填写错误, 请检查!');
                 }
             })
         }
