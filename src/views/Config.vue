@@ -64,7 +64,7 @@
 
 <template>
     <div class="layout">
-        <Header></Header>
+        <my-header :user-account="account" v-on:logout="handleLogout"></my-header>
 
         <div class="mybody">
             <div class="content">
@@ -91,27 +91,27 @@
                             发布历史
                         </Button>     
                         <Button >
-                            创建灰度
+                            重新同步
                         </Button>
                     </div>
                 </div>
 
                 <div class="edit">
                     <div class="editside">
-                        <Button>
-                            同步配置
-                        </Button>                    
+                        <Select v-model="currNamespace" style="width:150px">
+                            <Option v-for="item in namespaceList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+                        </Select>
                         <Button type="primary" @click="showNew">
                             新增配置
                         </Button>                        
                     </div>
                 </div>
-                <Table :row-class-name="rowClassName" :columns="tblColumns" :data="tblData" border highlight-row ></Table>   
-                <div style="margin: 30px 10px;overflow: hidden">
+                <Table :row-class-name="rowClassName" :columns="tblColumns" :data="showData" border highlight-row ></Table>   
+<!--                 <div style="margin: 30px 10px;overflow: hidden">
                     <div style="float: right;">
-                        <Page :total="totalCount" :current="1"></Page>
+                        <Page :total="allData.length" show-sizer show-total></Page>
                     </div>
-                </div>                
+                </div> -->
             </div>
         </div>
  
@@ -216,15 +216,47 @@
     export default {
         name: 'config',
         components: {
-          Header
-        },        
+          'my-header': Header
+        },
+        computed: {
+            showData: function() {
+                var shows = [];
+                if (this.currNamespace !== "") {
+                    if (this.currNamespace === "all") {
+                        shows = this.allData.slice();
+                    } else {
+                        for (var i = 0; i < this.allData.length; i++) {
+                            if (this.allData[i].namespace === this.currNamespace) {
+                                shows.push(this.allData[i]);
+                            }
+                        }
+                        for (var i = 0; i < this.allData.length; i++) {
+                            if (this.allData[i].namespace === "common") {
+                                shows.push(this.allData[i]);
+                            }
+                        }
+                    }
+                }
+                return shows;
+            },
+
+            account() {
+                return this.$store.getters.getAccount;
+            },
+        },
+
     	data () {
     		return {
+
+                currNamespace: '',
+                namespaceList: [],
+
                 modalCreate: false,
-                modalAudio: false,
-                audioSrc: "",
-                totalCount: 0,
-                tblData: [],
+
+                //从服务器拉到的所有数据
+                allData: [],
+
+                //当前表格显示的数据
 
                 reLogin: false,
 
@@ -262,6 +294,20 @@
                         title: '发布后值',
                         key: 'value',
                         width: 250,
+                    },
+                    {
+                        title: '变更',
+                        render: (h, params) => {
+                            const row = params.row;
+                            const color = row.isnew === true ? 'yellow' : 'blue';
+                            const text = row.isnew === true ? '新增' : '更新';
+                            return h('Tag', {
+                                props: {
+                                    type: 'dot',
+                                    color: color,
+                                }
+                            }, text);
+                        }
                     },
                 ],
 
@@ -405,7 +451,7 @@
             handleList() {
                 this.sendRequest("/api/list", {}, (response) => {
                     if (Array.isArray(response.entries)) {
-                        this.totalCount = this.tblData.length
+                        var namespaces = new Set();
                         for (var i = 0; i < response.entries.length; i++) {
                             var entry = response.entries[i];
                             var config = {
@@ -420,16 +466,30 @@
                                 updated: entry.updated,
                                 created: entry.created,
                             }
-                            this.tblData.push(config);
+                            this.allData.push(config);
+                            namespaces.add(entry.namespace);
                         }
+                        this.namespaceList.push({
+                            value: "all",
+                            label: "全部",
+                        });
+                        namespaces.forEach((value) => {
+                            if (value !== "common") {
+                                this.namespaceList.push({
+                                    value: value,
+                                    label: value,
+                                })               
+                            }
+                        });
+                        this.currNamespace = "all";
                     }
-                });               
+                });
             },
             handleEdit(index) {
                 //打开 modal 窗口
                 this.editModal = true;
                 //获取原数据
-                this.editForm = Object.assign({}, this.tblData[index]); 
+                this.editForm = Object.assign({}, this.showData[index]);
                 this.editIndex = index;
             },
             editSubmit(name) {
@@ -437,8 +497,12 @@
                     if (valid) {
                         this.editModal = false;
                         if (this.editIndex >= 0) {
-                            this.tblData[this.editIndex].value = this.editForm.value
-                            console.log("row<%d>: %o", this.editIndex, this.tblData[this.editIndex])                            
+                            var id = this.showData[this.editIndex].id;
+                            for (var i = 0; i < this.allData.length; i++) {
+                                if (this.allData[i].id === id) {
+                                    this.allData[i].value = this.editForm.value;
+                                }
+                            }
                             this.editIndex = -1;
 
                             this.updateChanged();
@@ -492,8 +556,8 @@
                                 succ_cnt = response.entries.length;
                                 for (var i = 0; i < succ_cnt; i++) {
                                     var entry = response.entries[i];
-                                    for (var j = 0; j < this.tblData.length; j++) {
-                                        var data = this.tblData[j]
+                                    for (var j = 0; j < this.allData.length; j++) {
+                                        var data = this.allData[j]
                                         if (data.namespace == entry.namespace && data.key == entry.key) {
                                             if (data.isnew == true) {
                                                 data.isnew = false;
@@ -550,7 +614,8 @@
                             updated: 0,
                             created: 0,
                         }
-                        this.tblData.unshift(config);
+                        //计算属性showdata会随着改变
+                        this.allData.unshift(config);
 
                         this.updateChanged();                      
                     } else {
@@ -576,8 +641,8 @@
                 this.editChangeModal = true;
             },
             handleReset() {
-                for (var i = 0; i < this.tblData.length; i++) {
-                    var row = this.tblData[i];
+                for (var i = 0; i < this.allData.length; i++) {
+                    var row = this.allData[i];
                     row.value = row.oldvalue;
                 }
                 this.changesData = [];
@@ -618,10 +683,10 @@
 
             updateChanged() {
                 this.changesData = [];
-                for (var i = 0; i < this.tblData.length; i++) {
-                    var row = this.tblData[i];
+                for (var i = 0; i < this.allData.length; i++) {
+                    var row = this.allData[i];
                     if (row.value != row.oldvalue) {
-                        this.changesData.push({
+                        var entry = {
                             isnew: row.isnew,
                             id: row.id,
                             namespace: row.namespace,
@@ -629,9 +694,14 @@
                             value: row.value,
                             oldvalue: row.oldvalue,
                             version: row.version,
-                        })
+                        };
+                        this.changesData.push(entry);
                     }
                 }
+            },
+
+            handleLogout() {
+                this.$router.push('/login');
             },
     	},
         mounted() {

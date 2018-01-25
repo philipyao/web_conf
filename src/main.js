@@ -14,6 +14,9 @@ import axios from 'axios'
 // import VueAxios from 'vue-axios'
 import Qs from 'qs'
 
+import Vuex from 'vuex'
+Vue.use(Vuex);
+
 Vue.config.productionTip = false
 // 强制启用devtools
 Vue.config.devtools = true
@@ -50,15 +53,28 @@ var jsonInst = axios.create({
 });
 Vue.prototype.$jsonHttp = jsonInst
 
-// Vue.use(VueAxios, instance)
-
-
+const store = new Vuex.Store({
+  state: {
+    account: '',
+  },
+  mutations: {
+    setAccount (state, payload) {
+      // 变更状态
+      state.account = payload.account;
+    },
+  },
+  getters: {
+    getAccount (state) {
+      return state.account;
+    }
+  }  
+})
 
 /* eslint-disable no-new */
 new Vue({
   el: '#app',
   router,
-  // store,
+  store,
   template: '<App/>',
   components: { App }
 })

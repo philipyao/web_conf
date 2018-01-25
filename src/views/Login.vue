@@ -54,7 +54,7 @@
           //TODO 校验
           this.formLogin.password = sha1(sha1(this.formLogin.password));
           this.$formHttp.post('/api/login', this.formLogin).then((response) => {
-              console.log(response)
+              console.log(response);
               if (response.status != 200) {
                 this.$Message.error("登录失败：", response.status, response.statusText);
                 return;
@@ -64,6 +64,10 @@
                 return;
               }
               this.$Message.success('登录成功');
+              console.log("login rsp: ", response.data);
+
+              //设置全局数据
+              this.$store.commit('setAccount', {account: response.data.userinfo.username});
               
               let routes = [];
               routes.push({

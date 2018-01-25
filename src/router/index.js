@@ -3,7 +3,6 @@ import Router from 'vue-router'
 
 Vue.use(Router);
 
-
 //设置cookie, expiredays为null则有效期为默认session
 Vue.prototype.setCookie = (name, value, expiredays) => {
   var exdate = new Date();
