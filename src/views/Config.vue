@@ -3,29 +3,118 @@
         background-color:  #fff8dc;
         color: #000;
     }
+
+    .layout {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .mybody {
+        /*设置overflow: hidden防止子元素的margin-top不起效（与父元素合并）*/
+        overflow: hidden;
+        background-color: #f5f5f5;
+    }
+    .content {
+        background-color: #fff;
+        margin: 20px 10px;
+        padding: 0 20px;
+    }
+
+    .blockdiv {
+        display: inline-block;
+    }
+
+    /*两端有内容*/
+    .content .release {
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+
+        border-bottom: 1px solid #eeeeee;        
+    }
+    .content .release .endpoint {
+        /*水平菜单，并有一定间隔*/
+        display: inline-block;  
+              
+        /*inline垂直居中*/
+        height: 60px; 
+        line-height: 60px;
+    }  
+
+    /*靠右有内容*/
+    .content .edit {
+        display: flex; 
+        justify-content: flex-end;; 
+        align-items: center;
+    }
+    .content .edit .editside{
+        /*水平菜单，并有一定间隔*/
+        display: inline-block;  
+              
+        /*inline垂直居中*/
+        height: 60px; 
+        line-height: 60px;
+    } 
+
+    .badge-update {
+        background: #fff !important;
+        color: black;
+    }
 </style>
 
 <template>
-    <div>
-        <div style="height: 60px; padding: 10px 30px 20px 0; display:flex; justify-content:flex-end;">
-            <Button type="success" @click="showUpdate">
-                发布修改
-            </Button>
-            <Button @click="handleReset">
-                取消修改
-            </Button>            
-        </div>
-        <div style="height: 60px; padding: 10px 30px 20px 0; display:flex; justify-content:flex-end;">
-            <Button type="primary" @click="showNew">
-                新增配置
-            </Button>       
-        </div>
-        <Table :row-class-name="rowClassName" :columns="tblColumns" :data="tblData" border highlight-row ></Table>   
-        <div style="margin: 30px 10px;overflow: hidden">
-            <div style="float: right;">
-                <Page :total="totalCount" :current="1"></Page>
+    <div class="layout">
+        <Header></Header>
+
+        <div class="mybody">
+            <div class="content">
+                <!-- 水平布局：空格在中间，两头放内容 -->
+                <!-- 垂直布局：居中 -->
+                <div class="release">
+                    <div class="endpoint" >
+                        <div class="blockdiv">
+                            <h3 style="font-size: 15px;">配置列表</h3>
+                        </div>
+                        <div class="blockdiv" v-if="changesData.length > 0">
+                            <Tag color="yellow">有修改&nbsp;&nbsp;<Badge :count="changesData.length" class-name="badge-update"></Badge></Tag>
+                        </div>
+
+                    </div>
+                    <div class="endpoint">
+                        <Button type="success" @click="showUpdate">
+                            发布修改
+                        </Button>
+                        <Button @click="handleReset">
+                            撤销修改
+                        </Button>
+                        <Button >
+                            发布历史
+                        </Button>     
+                        <Button >
+                            创建灰度
+                        </Button>
+                    </div>
+                </div>
+
+                <div class="edit">
+                    <div class="editside">
+                        <Button>
+                            同步配置
+                        </Button>                    
+                        <Button type="primary" @click="showNew">
+                            新增配置
+                        </Button>                        
+                    </div>
+                </div>
+                <Table :row-class-name="rowClassName" :columns="tblColumns" :data="tblData" border highlight-row ></Table>   
+                <div style="margin: 30px 10px;overflow: hidden">
+                    <div style="float: right;">
+                        <Page :total="totalCount" :current="1"></Page>
+                    </div>
+                </div>                
             </div>
         </div>
+ 
 
         <Modal v-model="reLogin" width="360">
             <p slot="header" style="color:#f60;text-align:center">
@@ -122,8 +211,13 @@
 
 <script>
     import moment from 'moment'
+    import Header from '@/components/Header'
 
     export default {
+        name: 'config',
+        components: {
+          Header
+        },        
     	data () {
     		return {
                 modalCreate: false,
@@ -203,7 +297,6 @@
                     {
                         title: '配置值',
                         key: 'value',
-                        width: 400,
                     },   
                     {
                         title: '当前版本',
@@ -246,7 +339,7 @@
                     {
                         title: '操作',
                         align: 'center',
-                        width: 200,
+                        width: 150,
                         render: (h, params) => {
                             return h('div', [
                                 h('Button', {
@@ -347,6 +440,8 @@
                             this.tblData[this.editIndex].value = this.editForm.value
                             console.log("row<%d>: %o", this.editIndex, this.tblData[this.editIndex])                            
                             this.editIndex = -1;
+
+                            this.updateChanged();
                         }
                     } else {
                         this.$Message.error('编辑配置有错误，请更正!');
@@ -455,7 +550,9 @@
                             updated: 0,
                             created: 0,
                         }
-                        this.tblData.unshift(config);                        
+                        this.tblData.unshift(config);
+
+                        this.updateChanged();                      
                     } else {
                         this.$Message.error('新增配置有错误，请更正!');
                     }
@@ -472,21 +569,6 @@
                 }
             },
             showUpdate() {
-                this.changesData = [];
-                for (var i = 0; i < this.tblData.length; i++) {
-                    var row = this.tblData[i];
-                    if (row.value != row.oldvalue) {
-                        this.changesData.push({
-                            isnew: row.isnew,
-                            id: row.id,
-                            namespace: row.namespace,
-                            key: row.key,
-                            value: row.value,
-                            oldvalue: row.oldvalue,
-                            version: row.version,
-                        })
-                    }
-                }
                 if (this.changesData.length == 0) {
                     this.$Message.error('没有修改可供发布，请确认!');
                     return;
@@ -532,7 +614,25 @@
                     this.$Message.error(error);
                     console.log("jsonHttp post catch error", error);                    
                 })
-            }
+            },
+
+            updateChanged() {
+                this.changesData = [];
+                for (var i = 0; i < this.tblData.length; i++) {
+                    var row = this.tblData[i];
+                    if (row.value != row.oldvalue) {
+                        this.changesData.push({
+                            isnew: row.isnew,
+                            id: row.id,
+                            namespace: row.namespace,
+                            key: row.key,
+                            value: row.value,
+                            oldvalue: row.oldvalue,
+                            version: row.version,
+                        })
+                    }
+                }
+            },
     	},
         mounted() {
             this.handleList()

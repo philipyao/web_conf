@@ -8,7 +8,7 @@ Vue.use(Router);
 Vue.prototype.setCookie = (name, value, expiredays) => {
   var exdate = new Date();
   exdate.setDate(exdate.getDate() + expiredays);　　　　
-  document.cookie = name"=" + escape(value) + ((expiredays == null) ? "" : ";expires=" + exdate.toGMTString());
+  document.cookie = name + "=" + escape(value) + ((expiredays == null) ? "" : ";expires=" + exdate.toGMTString());
 };
 
 //获取cookie
@@ -37,7 +37,7 @@ const router = new Router({
     {
       path: '/login',
       name: 'login',
-      component: resolve => require(['@/components/Login'], resolve)
+      component: resolve => require(['@/views/Login'], resolve)
     },
     {
       path: '/config',
