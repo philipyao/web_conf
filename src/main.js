@@ -3,7 +3,7 @@
 import Vue from 'vue'
 import App from './App'
 import router from '@/router'
-// import store from '@/store'
+import store from '@/store'
 
  // ivew UI组件
 import iView from 'iview'
@@ -52,23 +52,6 @@ var jsonInst = axios.create({
   responseType: 'json'
 });
 Vue.prototype.$jsonHttp = jsonInst
-
-const store = new Vuex.Store({
-  state: {
-    account: '',
-  },
-  mutations: {
-    setAccount (state, payload) {
-      // 变更状态
-      state.account = payload.account;
-    },
-  },
-  getters: {
-    getAccount (state) {
-      return state.account;
-    }
-  }  
-})
 
 /* eslint-disable no-new */
 new Vue({

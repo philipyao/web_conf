@@ -118,7 +118,7 @@
         },
         computed: {
             account() {
-                return this.$store.getters.getAccount;
+                return this.$store.getters.account;
             },
         },
 
@@ -134,6 +134,7 @@
     	},
     	methods: {
             handleLogout() {
+                this.$store.commit('setUser', {account: "", is_super: false});
                 this.$router.push('/login');
             },
             gotoPrev() {

@@ -72,7 +72,7 @@
               console.log("login rsp: ", response.data);
 
               //设置全局数据
-              this.$store.commit('setAccount', {account: response.data.userinfo.username});
+              this.$store.dispatch('setUser', {account: response.data.userinfo.username, is_super: response.data.userinfo.is_super});
               
               let routes = [];
               routes.push({

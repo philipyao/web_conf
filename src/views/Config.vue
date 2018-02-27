@@ -820,12 +820,12 @@
                       console.error("失败：%d %s", response.status, response.statusText)
                       return
                     }
-                    if (response.data.errmsg !== "") {
-                        if (response.data.errmsg === "need login") {
+                    if (response.data.errcode !== 0) {
+                        if (response.data.errcode === 40004) {
                             //需要重新登录
                             this.reLogin = true;
                         } else {
-                            this.$Message.error(response.data.errmsg);
+                            this.$Message.error(response.data.errcode, response.data.errmsg);
                         }
                         return
                     }
@@ -856,6 +856,7 @@
             },
 
             handleLogout() {
+                this.$store.commit('setUser', {account: "", is_super: false});
                 this.$router.push('/login');
             },
     	},

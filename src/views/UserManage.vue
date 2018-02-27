@@ -83,7 +83,7 @@
         },
         computed: {
             account() {
-                return this.$store.getters.getAccount;
+                return this.$store.getters.account;
             },
         },
 
@@ -117,6 +117,10 @@
                         		on: {
                         			'on-change': (value) => {
                         				console.log(value);
+                        				var enable = value ? 1 : 0;
+                        				if (params.row.enabled !== enable) {
+                        					this.handleChangeUser(params.row, enable);                        					
+                        				}
                         			}
                         		}
                         	}, [
@@ -146,6 +150,7 @@
     	},
     	methods: {
             handleLogout() {
+            	this.$store.commit('setUser', {account: "", is_super: false});
                 this.$router.push('/login');
             },
             gotoPrev() {
@@ -174,6 +179,16 @@
                     }
                 })            	
             },
+            handleChangeUser(row, enable) {
+                this.sendPostRequest("/api/user/change", {username: row.username, enable: enable}, (response) => {
+                	row.enabled = enable;
+                	if (enable === 0) {
+                		this.$Message.info('禁用用户成功!');
+                	} else {
+                		this.$Message.info('启用用户成功!');
+                	}
+                })   
+            },
             handleReLogin() {
                 this.reLogin = false;
                 this.$router.push('/login');
@@ -185,12 +200,12 @@
                       console.error("失败：%d %s", response.status, response.statusText)
                       return
                     }
-                    if (response.data.errmsg !== "") {
-                        if (response.data.errmsg === "need login") {
+                    if (response.data.errcode !== 0) {
+                        if (response.data.errcode === 40004) {
                             //需要重新登录
                             this.reLogin = true;
                         } else {
-                            this.$Message.error(response.data.errmsg);
+                            this.$Message.error(response.data.errcode, response.data.errmsg);
                         }
                         return
                     }
