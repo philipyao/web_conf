@@ -1,4 +1,4 @@
-<style type="text/css">
+<style type="text/css" scoped>
     .layout {
         max-width: 1400px;
         margin: 0 auto;
@@ -57,7 +57,8 @@
 
 <template>
     <div class="layout">
-        <my-header :user-account="account" v-on:logout="handleLogout"></my-header>
+        <!-- <my-header :user-account="account" v-on:logout="handleLogout"></my-header> -->
+        <my-header></my-header>
 
         <div class="mybody">
             <div class="content">
@@ -70,10 +71,10 @@
                         <Icon type="ios-keypad" size="60"></Icon>
                         <div><h3 style="font-size: 15px;">配置操作</h3></div>
                     </div>
-                    <div class="info-block">
+                    <div class="info-block" @click="routeOplog">
                         <Icon type="ios-paper" size="60"></Icon>
                         <div><h3 style="font-size: 15px;">历史日志</h3></div>                        
-                    </div>  
+                    </div>
                     <div class="info-block">
                     </div>  
                     <div class="info-block">
@@ -91,31 +92,23 @@
     import Header from '@/components/Header';
 
     export default {
-        name: 'info',
+        name: 'home',
         components: {
-          'my-header': Header
+            'my-header': Header
         },
-        computed: {
-            account() {
-                return this.$store.getters.account;
-            },
-        },
-
     	data () {
     		return {
             }
     	},
     	methods: {
-            handleLogout() {
-                this.$store.commit('setUser', {account: "", is_super: false});
-                this.$router.push('/login');
-            },
-
             routeConfig() {
                 this.$router.push('/config');
             },
             routeUser() {
                 this.$router.push('/userManage');
+            },
+            routeOplog() {
+
             },
     	},
         mounted() {

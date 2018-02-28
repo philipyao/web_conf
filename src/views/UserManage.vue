@@ -1,4 +1,4 @@
-<style type="text/css">
+<style type="text/css" scoped>
 	ul {
 		list-style-type:disc;
 	}
@@ -27,19 +27,19 @@
 
 <template>
     <div class="layout">
-        <my-header :user-account="account" v-on:logout="handleLogout"></my-header>
+        <my-header></my-header>
 
         <div class="mybody">
         	<div class="content">
 	    		<Button type="primary" @click="showCreateUser = true;">
-	            	新增配置
+	            	创建用户
 	            </Button>         		
         		<Table width="800" :columns="utblColumns" :data="userData" highlight-row ></Table>
         	</div>
         </div>
 
         <!--新增用户 Modal 对话框-->
-        <Modal v-model="showCreateUser" title="新增用户" >
+        <Modal v-model="showCreateUser" title="创建用户" >
             <div>
                 <Form ref="editCreateUser" :model="editCreateUser" :rules="ruleValidateCreateUser" :label-width="80">
                     <Form-item label="用户名" prop="username">
@@ -81,11 +81,6 @@
         components: {
           'my-header': Header
         },
-        computed: {
-            account() {
-                return this.$store.getters.account;
-            },
-        },
 
     	data () {
     		return {
@@ -116,7 +111,6 @@
                         		},
                         		on: {
                         			'on-change': (value) => {
-                        				console.log(value);
                         				var enable = value ? 1 : 0;
                         				if (params.row.enabled !== enable) {
                         					this.handleChangeUser(params.row, enable);                        					
@@ -138,24 +132,19 @@
 				showCreateUser: false,
 				editCreateUser: {},
                 ruleValidateCreateUser: {
-                    username: [
-                        { required: true, message: '请填写合法的用户名！', trigger: 'blur' }
-                    ],
-                    passwd: [
-                        { required: true, message: '请填写密码！', trigger: 'blur' }
-                    ],
+	                username: [
+	                    {required: true, message: '请填写帐号', trigger: 'blur'},
+	                    {type: 'string', min: 3, message: '帐号长度不能不能少于3个字符', trigger: 'blur'}
+	                ],
+	                passwd: [
+	                    {required: true, message: '请填写密码', trigger: 'blur'},
+	                    {type: 'string', min: 6, message: '密码长度不能小于6位', trigger: 'blur'}
+	                ],
                 },
-                reLogin: false,  				
+                reLogin: false,
             }
     	},
     	methods: {
-            handleLogout() {
-            	this.$store.commit('setUser', {account: "", is_super: false});
-                this.$router.push('/login');
-            },
-            gotoPrev() {
-            	this.$router.go(-1);
-            },
             handleCreateUser(name) {
                 this.$refs[name].validate((valid) => {
                     if (valid) {
@@ -179,7 +168,7 @@
                     }
                 })            	
             },
-            handleChangeUser(row, enable) {
+            handleChangeUser(row, enable) { 
                 this.sendPostRequest("/api/user/change", {username: row.username, enable: enable}, (response) => {
                 	row.enabled = enable;
                 	if (enable === 0) {

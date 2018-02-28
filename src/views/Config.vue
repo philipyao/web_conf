@@ -1,4 +1,4 @@
-<style type="text/css">
+<style type="text/css" scoped>
     .ivu-table .table-change-row td{
         background-color:  #fff8dc;
         color: #000;
@@ -145,7 +145,7 @@
 
 <template>
     <div class="layout">
-        <my-header :user-account="account" v-on:logout="handleLogout"></my-header>
+        <my-header></my-header>
 
         <div class="mybody">
             <div class="content">
@@ -366,10 +366,6 @@
                     }
                 }
                 return shows;
-            },
-
-            account() {
-                return this.$store.getters.getAccount;
             },
         },
 
@@ -853,11 +849,6 @@
                         this.changesData.push(entry);
                     }
                 }
-            },
-
-            handleLogout() {
-                this.$store.commit('setUser', {account: "", is_super: false});
-                this.$router.push('/login');
             },
     	},
         mounted() {

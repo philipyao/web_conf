@@ -9,7 +9,7 @@
         <div class="log-cloud cloud3"></div>
         <div class="log-cloud cloud4"></div>
 
-        <div class="log-logo">欢迎登录管理平台!</div>
+        <div class="log-logo">欢迎登录配置中心!</div>
         <div class="log-text">@keepmovingbuddy</div>
     </div>
     <div ref="formLogin" :model="formLogin" :rules="ruleValidate" class="log-email">
@@ -26,7 +26,6 @@
 </template>
 
 <script>
-  import sha1 from 'js-sha1'
   import Crypto from 'crypto-js'
 
   export default {
@@ -36,7 +35,6 @@
             formLogin: {
                 username: '',
                 password: '',
-                code: ''
             },
             ruleValidate: {
                 username: [

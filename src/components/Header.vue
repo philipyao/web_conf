@@ -3,7 +3,7 @@
 		<div class="header_left">
 			<h2>Pconf 配置中心</h2>
 		</div>      
-        <div class="header_right user-info" @click="toggleLogout">
+        <div class="header_right user-info" @click="toggleLogoutModal">
             <span style="font-weight:bold;">{{account}} </span>
             <Icon type="log-out" size="14"></Icon>
         </div>  
@@ -24,8 +24,8 @@
                 <p>当前所有的修改将丢弃，确定选择退出？</p>
             </div>
             <div slot="footer">
-                <Button  @click="toggleLogout">取消</Button>
-                <Button type="warning"  @click="handleLogout">确定</Button>
+                <Button  @click="toggleLogoutModal">取消</Button>
+                <Button type="warning"  @click="logout">确定</Button>
             </div>
         </Modal>        
 	</div>
@@ -42,7 +42,6 @@
 	    },
         computed: {
             showModal () {
-                console.log("show: ", this.$store.getters.showConfirmLogout);
                 return this.$store.getters.showConfirmLogout;
             },
             account() {
@@ -50,10 +49,10 @@
             },
         },
         methods: {
-            toggleLogout() {
+            toggleLogoutModal() {
                 this.$store.dispatch('toggerLogoutModal');
             },
-            handleLogout() {
+            logout() {
                 this.$Message.info('登录退出');
                 this.$store.dispatch('toggerLogoutModal');
                 this.$store.dispatch('setUser', {account: "", is_super: false});

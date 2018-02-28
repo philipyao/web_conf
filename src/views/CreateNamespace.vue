@@ -1,4 +1,4 @@
-<style type="text/css">
+<style type="text/css" scoped>
 	ul {
 		list-style-type:disc;
 	}
@@ -68,13 +68,13 @@
 
 <template>
     <div class="layout">
-        <my-header :user-account="account" v-on:logout="handleLogout"></my-header>
+        <my-header></my-header>
 
         <div class="mybody">
         	<div class="content">
         		<div class="cn-header">
         			<div class="cn-header-text">新建区间(私有)</div>
-        			<Button type="info" class="cn-header-btn" @click="gotoPrev">返回上页</Button>
+        			<Button type="info" class="cn-header-btn" @click="backwards">返回上页</Button>
         		</div>
         		<div class="cn-body">
         			<div class="alert alert-info">
@@ -88,8 +88,8 @@
 
         			<div class="form-panel">
 					    <Form :module="formNamespace" :rules="ruleValidate" :label-width="80">
-					        <FormItem label="创建者" style="width: 300px">
-					            <label>==> {{ account }}</label>
+					        <FormItem label="创建者" style="width: 300px" disabled>
+					            <Input v-model="formNamespace.author"></Input>
 					        </FormItem>
 					        <FormItem label="名称" style="width: 400px">
 					            <Input v-model="formNamespace.name"></Input>
@@ -112,16 +112,10 @@
     import Header from '@/components/Header';
 
     export default {
-        name: 'info',
+        name: 'createNamespace',
         components: {
           'my-header': Header
         },
-        computed: {
-            account() {
-                return this.$store.getters.account;
-            },
-        },
-
     	data () {
     		return {
     			formNamespace: {},
@@ -133,16 +127,12 @@
             }
     	},
     	methods: {
-            handleLogout() {
-                this.$store.commit('setUser', {account: "", is_super: false});
-                this.$router.push('/login');
-            },
-            gotoPrev() {
+            backwards() {
             	this.$router.go(-1);
             },
     	},
         mounted() {
-        	this.formNamespace.author = this.account;
+        	this.formNamespace.author = this.$store.getters.account;
         }
     }
 </script>
