@@ -26,7 +26,7 @@
 </template>
 
 <script>
-  import Crypto from 'crypto-js'
+  import api from '@/api/api'
 
   export default {
     name: 'login',
@@ -51,26 +51,35 @@
     },
     methods: {
         handleSubmit() {
-          //TODO 校验
-          const salt = "^rR@8=YlsU";
-          var encStr = salt + this.formLogin.password + this.formLogin.username;
-          this.formLogin.password = Crypto.SHA1(encStr).toString();
-          console.log("login req: raw %o, %o", encStr, this.formLogin);
-          this.$formHttp.post('/api/login', this.formLogin).then((response) => {
-              console.log(response);
-              if (response.status != 200) {
-                this.$Message.error("登录失败：", response.status, response.statusText);
-                return;
-              }
-              if (response.data.errmsg != "") {
-                this.$Message.error("登录失败：", response.data.errmsg);
+          api.login(this.formLogin.username, this.formLogin.password).then((response) => {
+              console.log("login rsp: %o", response);
+              if (response.errcode !== 0) {
+                switch (response.errcode) {
+                  case 40002:
+                    this.$Modal.warning({
+                        title: "登录错误",
+                        content: "账号被禁用，请联系管理员"
+                    });
+                    break;
+                  case 40003:
+                    this.$Message.warning({
+                      content: '用户名或者密码错误',
+                      duration: 4,
+                    })
+                    break;
+                  default:
+                    var errmsg = string(response.errcode) + ": " + response.errmsg;
+                    this.$Modal.warning({
+                        title: "登录错误",
+                        content: errmsg
+                    });
+                }
                 return;
               }
               this.$Message.success('登录成功');
-              console.log("login rsp: ", response.data);
 
               //设置全局数据
-              this.$store.dispatch('setUser', {account: response.data.userinfo.username, is_super: response.data.userinfo.is_super});
+              this.$store.dispatch('setUser', {account: response.userinfo.username, is_super: response.userinfo.is_super});
               
               let routes = [];
               routes.push({
@@ -82,8 +91,11 @@
               //返回主页
               this.$router.push('/');
           }).catch((error) => {
-              this.$Message.error("请求登录错误", error);
               console.log(error);
+              this.$Modal.error({
+                  title: "登录错误",
+                  content: error,
+              });
           })
         }
     }

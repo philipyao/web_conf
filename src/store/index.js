@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import Vuex from 'vuex'
+import router from '@/router'
 
 Vue.use(Vuex);
 
@@ -22,6 +23,14 @@ const store = new Vuex.Store({
       state.showConfirmLogout = !state.showConfirmLogout;
       console.log("[store] togger show: ", state.showConfirmLogout);
     },
+    FORCE_RELOGIN: (state) => {
+      state.user.account = '';
+      state.user.is_super = false;
+      router.replace({
+          path: '/login',
+          query: {redirect: router.currentRoute.fullPath}
+      })
+    },
   },
   actions: {
   	setUser: ({ commit }, payload) => {
@@ -31,6 +40,9 @@ const store = new Vuex.Store({
   		console.log("toggerLogoutModal");
   		commit('TOGGER_LOGOUT_MODAL');
   	},
+    forceRelogin: ({ commit }) => {
+      commit('FORCE_RELOGIN');
+    },
   },
   getters: {
     account: (state) => {

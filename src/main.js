@@ -9,11 +9,6 @@ import store from '@/store'
 import iView from 'iview'
 import '../theme/iview/index.less'
 
-// ajax 
-import axios from 'axios'
-// import VueAxios from 'vue-axios'
-import Qs from 'qs'
-
 import Vuex from 'vuex'
 Vue.use(Vuex);
 
@@ -23,35 +18,7 @@ Vue.config.devtools = true
 
 Vue.use(iView)
 
-var instance = axios.create({
-  baseURL: '',
-  //`withCredentails`选项表明了是否是跨域请求
-  withCredentials: true,  
-  timeout: 2000,
-  //请求类型
-  headers:{'Content-Type':'application/x-www-form-urlencoded'},
-  transformRequest: [function (data) {
-  	//x-www-form-urlencoded
-    data = Qs.stringify(data);
-    return data;
-  }],
-  //返回类型
-  responseType: 'json'
-});
 
-Vue.prototype.$formHttp = instance
-
-var jsonInst = axios.create({
-  baseURL: '',
-  //`withCredentails`选项表明了是否是跨域请求
-  withCredentials: true,  
-  timeout: 2000,
-  //请求类型
-  headers:{'Content-Type':'application/json'},
-  //返回类型
-  responseType: 'json'
-});
-Vue.prototype.$jsonHttp = jsonInst
 
 /* eslint-disable no-new */
 new Vue({
