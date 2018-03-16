@@ -1,38 +1,21 @@
 import Vue from 'vue'
 import Router from 'vue-router'
+import {getCookie} from '../util/util'
 
 Vue.use(Router);
 
-//设置cookie, expiredays为null则有效期为默认session
-Vue.prototype.setCookie = (name, value, expiredays) => {
-  var exdate = new Date();
-  exdate.setDate(exdate.getDate() + expiredays);　　　　
-  document.cookie = name + "=" + escape(value) + ((expiredays == null) ? "" : ";expires=" + exdate.toGMTString());
-};
 
-//获取cookie
-var getCookie = (name) => {
-  var arr, reg = new RegExp("(^| )" + name + "=([^;]*)(;|$)");
-  if (arr = document.cookie.match(reg)) {
-    return (arr[2]);
-  } else {
-    return null;
-  }   
-};
-Vue.prototype.getCookie = getCookie;
-
-//删除cookie
-Vue.prototype.delCookie = (name) => {
-    var exp = new Date();
-    exp.setTime(exp.getTime() - 1);
-    var cval = getCookie(name);
-    if (cval != null) {
-      document.cookie = name + "=" + cval + ";expires=" + exp.toGMTString();
-    }
-};
 
 const router = new Router({
   routes: [ 
+    {
+      path: '/',
+      name: 'home',
+      meta: {
+        requireAuth: true,
+      },
+      component: resolve => require(['@/views/Home'], resolve)
+    },  
     {
       path: '/login',
       name: 'login',
@@ -41,20 +24,31 @@ const router = new Router({
     {
       path: '/config',
       name: 'config',
+      meta: {
+        requireAuth: true,
+      },      
       component: resolve => require(['@/views/Config'], resolve)
     },    
   ]
 })
 
 router.beforeEach((to, from, next) => {
-    //获取用户是否登陆
+  console.log("route to ", to.fullPath);
+  if (to.matched.some(r => r.meta.requireAuth)) {
     let sessid = getCookie("sessid");
-    if (sessid === null && to.path !== '/login') {
-      next({path: '/login'});
-    } else if (sessid !== null && to.path !== '/login') {
-      next({path: '/config'})
+    if (sessid === null) {
+      console.log("sess not found, next to /login, redirect ", to.fullPath);
+      next({
+          path: '/login',
+          query: {redirect: to.fullPath}
+      })
+    } else {
+      console.log("sess exist: ", sessid);
+      next();
     }
-    next()
+  } else {
+    next();    
+  }
 })
 
 export default router

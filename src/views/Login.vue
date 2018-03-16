@@ -77,7 +77,7 @@
               });
               this.$router.addRoutes(routes);
               //返回主页
-              this.$router.push('/config');
+              this.$router.push('/');
           }).catch((error) => {
               this.$Message.error("请求登录错误", error);
               console.log(error);
