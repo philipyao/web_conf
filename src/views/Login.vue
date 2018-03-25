@@ -27,6 +27,8 @@
 
 <script>
   import sha1 from 'js-sha1'
+  import Crypto from 'crypto-js'
+
   export default {
     name: 'login',
     data(){
@@ -52,7 +54,10 @@
     methods: {
         handleSubmit() {
           //TODO 校验
-          this.formLogin.password = sha1(sha1(this.formLogin.password));
+          const salt = "^rR@8=YlsU";
+          var encStr = salt + this.formLogin.password + this.formLogin.username;
+          this.formLogin.password = Crypto.SHA1(encStr).toString();
+          console.log("login req: raw %o, %o", encStr, this.formLogin);
           this.$formHttp.post('/api/login', this.formLogin).then((response) => {
               console.log(response);
               if (response.status != 200) {

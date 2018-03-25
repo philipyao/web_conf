@@ -54,12 +54,93 @@
         /*inline垂直居中*/
         height: 60px; 
         line-height: 60px;
+    }
+
+    .content .edit2 {
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
     } 
+    .content .edit2 .editside{
+        /*水平菜单，并有一定间隔*/
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+              
+        height: 60px; 
+    }
 
     .badge-update {
         background: #fff !important;
         color: black;
+        font-size: 5px;
+        height: 10px;
+        border-radius: 5px;
+        min-width: 10px;
+        line-height: 10px;
+        padding: 0;
     }
+
+    .label {
+        display: inline;
+        padding: .2em .6em .3em;
+        font-size: 75%;
+        font-weight: bold;
+        line-height: 1;
+        color: #fff;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: .25em;
+        margin: 0 2px;
+    }
+
+    .labelModify {
+        background-color: #5bc0de;      
+    }
+    .labelNew {
+        background-color: #5cb85c;    
+    }
+
+    .tagReleased {
+        background-color: #A4A4A4;
+        padding: .2em .6em .3em;
+        font-size: 75%;
+        font-weight: bold;
+        line-height: 1;
+        color: #fff;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;        
+    }
+    .tagUnreleased {
+        background-color: #f0ad4e;
+        padding: .2em .6em .3em;
+        font-size: 75%;
+        font-weight: bold;
+        line-height: 1;
+        color: #fff;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;        
+    }
+
+    .opIcon {
+        cursor: pointer;
+        margin-right: 10px;
+    }
+
+    .namespace-panel {
+        background: #31708f;
+        width: 40px;
+        color: #fff;
+        padding: .2em .6em .3em;
+        font-weight: bold;        
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;              
+    }
+
 </style>
 
 <template>
@@ -73,10 +154,62 @@
                 <div class="release">
                     <div class="endpoint" >
                         <div class="blockdiv">
-                            <h3 style="font-size: 15px;">配置列表</h3>
+                            <span class="namespace-panel">私有</span>
+                        </div>
+                        <div class="blockdiv">
+                            <h3 style="font-size: 17px;">区间配置</h3>
                         </div>
                         <div class="blockdiv" v-if="changesData.length > 0">
-                            <Tag color="yellow">有修改&nbsp;&nbsp;<Badge :count="changesData.length" class-name="badge-update"></Badge></Tag>
+                            <span class="tagUnreleased">有修改  <Badge :count="changesData.length" class-name="badge-update"></Badge></span>
+                        </div>
+
+                    </div>
+                    <div class="endpoint">
+                        <Button type="success" @click="showUpdate">
+                            发布修改
+                        </Button>
+                        <Button @click="handleReset">
+                            撤销修改
+                        </Button>
+                        <Button >
+                            发布历史
+                        </Button>     
+                        <Button >
+                            重新同步
+                        </Button>
+                    </div>
+                </div>
+
+                <div class="edit2">
+                    <div class="editside">
+                        <Select v-model="currNamespace" style="width:100px;">
+                            <Option v-for="item in namespaceList" :value="item.value" :key="item.value">{{ item.label }}</Option>
+                        </Select>
+                        <Tooltip content="新增作用区间" placement="bottom">
+                            <Icon style="margin-left: 8px; cursor: pointer" type="ios-plus-outline" size="28" @click.native="showCreateNamespace"></Icon>
+                        </Tooltip>
+                    </div>
+                    <div class="editside">
+                        <Button type="primary" @click="showNew">
+                            新增配置
+                        </Button>                        
+                    </div>                    
+                </div>
+                <Table :columns="tblColumns" :data="showData" border highlight-row ></Table>
+            </div>
+            <div class="content">
+                <!-- 水平布局：空格在中间，两头放内容 -->
+                <!-- 垂直布局：居中 -->
+                <div class="release">
+                    <div class="endpoint" >
+                        <div class="blockdiv">
+                            <span class="namespace-panel">公共</span>
+                        </div>
+                        <div class="blockdiv">
+                            <h3 style="font-size: 17px;">公共配置</h3>
+                        </div>
+                        <div class="blockdiv" v-if="changesData.length > 0">
+                            <span class="tagUnreleased">有修改  <Badge :count="changesData.length" class-name="badge-update"></Badge></span>
                         </div>
 
                     </div>
@@ -106,13 +239,8 @@
                         </Button>                        
                     </div>
                 </div>
-                <Table :row-class-name="rowClassName" :columns="tblColumns" :data="showData" border highlight-row ></Table>   
-<!--                 <div style="margin: 30px 10px;overflow: hidden">
-                    <div style="float: right;">
-                        <Page :total="allData.length" show-sizer show-total></Page>
-                    </div>
-                </div> -->
-            </div>
+                <Table :columns="tblColumns" :data="showData" border highlight-row ></Table>
+            </div>            
         </div>
  
 
@@ -311,37 +439,62 @@
                     },
                 ],
 
-                tblColumns: [
+                tblColumns: [ 
                     {
-                        type: 'selection',
-                        width: 58,
-                    },       
-                    {
-                        title: 'ID',
+                        title: '发布状态',
                         render: (h, params) => {
-                            if (params.row.isnew == true) {
-                                return h('span', "-");
+                            if (params.row.value !== params.row.oldvalue) {
+                                var labels = [];
+                                labels.push(h('span', {
+                                    // "class" is a reserved keyword in JS, so you have to quote it.
+                                    'class': {
+                                        tagUnreleased: true
+                                    },                              
+                                }, "未发布"));
+                                if (params.row.isnew === true) {
+                                    labels.push(h('span', {
+                                        // "class" is a reserved keyword in JS, so you have to quote it.
+                                        'class': {
+                                            label: true,
+                                            labelNew: true,
+                                        },                              
+                                    }, "新"));
+                                } else {
+                                    labels.push(h('span', {
+                                        // "class" is a reserved keyword in JS, so you have to quote it.
+                                        'class': {
+                                            label: true,
+                                            labelModify: true,
+                                        },                              
+                                    }, "改"));                   
+                                }
+                                return h('div', labels);
                             } else {
-                                return h('span', params.row.id + "");                                
+                                //jsx语法格式
+                                return h('span', {
+                                    // "class" is a reserved keyword in JS, so you have to quote it.
+                                    'class': {
+                                        tagReleased: true
+                                    },
+                                }, "已发布");
                             }
                         },
-                        width: 70,
-                        sortable: true,
+                        width: 120,
                     },
                     {
-                        title: '命名空间',
+                        title: '作用区间',
                         key: 'namespace',
                         width: 120,
                         sortable: true,
                     },
                     {
-                        title: '配置名',
+                        title: 'key',
                         key: 'key',
                         width: 150,
                         sortable: true,
                     },
                     {
-                        title: '配置值',
+                        title: 'value',
                         key: 'value',
                     },   
                     {
@@ -353,11 +506,10 @@
                                 return h('span', params.row.version + "");                                
                             }
                         },
-                        width: 120,
-                        sortable: true,
+                        width: 85,
                     },                                                                                 
                     {
-                        title: '最后更新',
+                        title: '最后修改',
                         key: 'updated',
                         width: 150,
                         render: (h, params) => {
@@ -370,52 +522,58 @@
                         }
                     },
                     {
-                        title: '创建时间',
-                        key: 'created',
-                        width: 150,
-                        render: (h, params) => {
-                            if (params.row.isnew == true) {
-                                return h('span', "-");
-                            }                            
-                            var d = new Date(0); // The 0 there is the key, which sets the date to the epoch
-                            d.setUTCSeconds(params.row.created);
-                            return h('span', moment(d).format('YYYY-MM-DD HH:mm:ss'));
-                        }                        
+                        title: '最后修改人',
+                        key: 'author',
+                        width: 150,                  
                     },                    
                     {
                         title: '操作',
                         align: 'center',
-                        width: 150,
+                        width: 100,
                         render: (h, params) => {
                             return h('div', [
-                                h('Button', {
+                                h('Tooltip', {
                                     props: {
-                                        type: 'success',
-                                        size: 'small'
+                                        content: '修改',
+                                        placement: 'bottom',
                                     },
-                                    style: {
-                                        marginRight: '5px'
-                                    },                                    
-                                    on: {
-                                        click: () => {
-                                            this.handleEdit(params.index)
-                                        }
-                                    }
-                                }, '修改'),
-                                h('Button', {
+                                }, [
+                                    h('Icon', {
+                                        props: {
+                                            type: 'compose',
+                                            size: 28,
+                                        },
+                                        'class': {
+                                            opIcon: true,
+                                        },                                    
+                                        nativeOn: {
+                                            click: () => {
+                                                this.handleEdit(params.index);
+                                            }
+                                        }                                    
+                                    }),
+                                ]),
+                                h('Tooltip', {
                                     props: {
-                                        type: 'error',
-                                        size: 'small'
+                                        content: '删除',
+                                        placement: 'bottom',
                                     },
-                                    style: {
-                                        marginRight: '5px'
-                                    },                                    
-                                    on: {
-                                        click: () => {
-                                            this.$Message.info("删除")
-                                        }
-                                    }                                    
-                                }, '删除')
+                                }, [
+                                    h('Icon', {
+                                        props: {
+                                            type: 'trash-a',
+                                            size: 28,
+                                        },
+                                        'class': {
+                                            opIcon: true,
+                                        },
+                                        nativeOn: {
+                                            click: () => {
+
+                                            }
+                                        }                                    
+                                    }),
+                                ]),
                             ])
                         }
                     }
@@ -471,7 +629,7 @@
                         }
                         this.namespaceList.push({
                             value: "all",
-                            label: "全部",
+                            label: "全部区间",
                         });
                         namespaces.forEach((value) => {
                             if (value !== "common") {
@@ -625,13 +783,6 @@
             },
             editCancelNew() {
                 this.editModalNew = false;
-            },            
-            rowClassName (row, index) {
-                if (row.value != row.oldvalue) {
-                    return 'table-change-row';
-                } else {
-                    return '';
-                }
             },
             showUpdate() {
                 if (this.changesData.length == 0) {
@@ -651,6 +802,10 @@
 
             showNew() {
                 this.editModalNew = true;
+            },
+
+            showCreateNamespace() {
+                this.$router.push('/createNamespace');
             },
 
             handleReLogin() {
