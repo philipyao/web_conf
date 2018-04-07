@@ -54,13 +54,27 @@
                 <Button type="ghost" @click="showCreateUser = false;" style="margin-left: 8px">取消</Button>
                 <Button type="primary" @click="handleCreateUser('editCreateUser')">确定</Button>                
             </div>
-        </Modal>        
+        </Modal>  
+
+        <Modal v-model="reLogin" width="360">
+            <p slot="header" style="color:#f60;text-align:center">
+                <Icon type="information-circled"></Icon>
+                <span>重新登录</span>
+            </p>
+            <div style="text-align:center">
+                <p>当前网页会话已过期，请重新登录。</p>
+            </div>
+            <div slot="footer">
+                <Button type="warning" size="large" long  @click="handleReLogin">确定</Button>
+            </div>
+        </Modal>              
     </div>
 </template>
 
 <script>
     import Header from '@/components/Header';
     import moment from 'moment';
+    import Crypto from 'crypto-js';
     
     export default {
         name: 'userManage',
@@ -116,18 +130,7 @@
                         }
                     }
                 ],
-                userData: [
-                	{
-                		username: "hello",
-                		created_at: 1519457575,
-                		enabled: 1,
-                	},
-                	{
-                		username: "world",
-                		created_at: 1519457575,
-                		enabled: 0,
-                	}
-                ],
+                userData: [],
 				showCreateUser: false,
 				editCreateUser: {},
                 ruleValidateCreateUser: {
@@ -137,7 +140,8 @@
                     passwd: [
                         { required: true, message: '请填写密码！', trigger: 'blur' }
                     ],
-                },     				
+                },
+                reLogin: false,  				
             }
     	},
     	methods: {
@@ -150,15 +154,80 @@
             handleCreateUser(name) {
                 this.$refs[name].validate((valid) => {
                     if (valid) {
+                        this.editCreateUser.username = this.editCreateUser.username.trim();
+                        this.editCreateUser.passwd = this.editCreateUser.passwd.trim();
+                        if (this.editCreateUser.username === "" || this.editCreateUser.passwd === "") {
+                        	this.$Message.error('有空值，请更正!');
+                        	return
+                        }
                         this.showCreateUser = false;
-                        this.$Message.info("添加用户成功");
+                        const salt = "^rR@8=YlsU";
+						var encStr = salt + this.editCreateUser.passwd + this.editCreateUser.username;
+                        this.sendPostRequest("/api/user/create", {username: this.editCreateUser.username, enc_passwd: Crypto.SHA1(encStr).toString()}, (response) => {
+                        	var entry = response.entry;
+                        	this.userData.push(entry);
+                        	this.editCreateUser.username = "";
+                        	this.editCreateUser.passwd = "";
+                        })   
                     } else {
                         this.$Message.error('有错误，请更正!');
                     }
                 })            	
             },
+            handleReLogin() {
+                this.reLogin = false;
+                this.$router.push('/login');
+            },            
+            sendGetRequest(path, args, fn) {
+                this.$jsonHttp.get(path, args).then((response) => {
+                    if (response.status != 200) {
+                      this.$Message.error("失败: ", response.status, response.statusText)
+                      console.error("失败：%d %s", response.status, response.statusText)
+                      return
+                    }
+                    if (response.data.errmsg !== "") {
+                        if (response.data.errmsg === "need login") {
+                            //需要重新登录
+                            this.reLogin = true;
+                        } else {
+                            this.$Message.error(response.data.errmsg);
+                        }
+                        return
+                    }
+                    fn(response.data)
+                }).catch((error) => {
+                    this.$Message.error(error);
+                    console.log("jsonHttp post catch error", error);                    
+                })
+            },         
+            sendPostRequest(path, args, fn) {
+                this.$jsonHttp.post(path, args).then((response) => {
+                    if (response.status != 200) {
+                      this.$Message.error("失败: ", response.status, response.statusText)
+                      console.error("失败：%d %s", response.status, response.statusText)
+                      return
+                    }
+                    if (response.data.errmsg !== "") {
+                        if (response.data.errmsg === "need login") {
+                            //需要重新登录
+                            this.reLogin = true;
+                        } else {
+                            this.$Message.error(response.data.errmsg);
+                        }
+                        return
+                    }
+                    fn(response.data)
+                }).catch((error) => {
+                    this.$Message.error(error);
+                    console.log("jsonHttp post catch error", error);                    
+                })
+            },                  
     	},
         mounted() {
+			this.sendGetRequest("/api/user/list", {}, (response) => {
+				console.log("entries: ", response.entries);
+				this.userData = response.entries || [];
+			})
         }
     }
 </script>
