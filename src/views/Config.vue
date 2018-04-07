@@ -314,7 +314,7 @@
                 <div style="border: 1px solid black">
                     <Table :columns="tblChanges" :data="changesData"></Table>
                 </div>
-            </div>            
+            </div>
             <div>
                 <Form ref="editChange" :model="editChange" :label-width="80" :rules="ruleUpdateValidate">
                     <Form-item label="发布标题" prop="name">

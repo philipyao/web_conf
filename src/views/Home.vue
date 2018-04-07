@@ -62,7 +62,7 @@
         <div class="mybody">
             <div class="content">
                 <div class="info-block-container">
-                    <div class="info-block">
+                    <div class="info-block" @click="routeUser">
                         <Icon type="ios-people" size="60"></Icon>
                         <div><h3 style="font-size: 15px;">用户管理</h3></div>
                     </div>
@@ -112,7 +112,10 @@
 
             routeConfig() {
                 this.$router.push('/config');
-            }
+            },
+            routeUser() {
+                this.$router.push('/userManage');
+            },
     	},
         mounted() {
         }
