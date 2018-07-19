@@ -51,16 +51,13 @@
 
 	    <!-- 发布对话框 -->
         <Modal v-model="editChangeModal" title="编辑发布信息" width="1000">
-            <div style="margin-bottom: 24px; display: flex;">
-                <div style="border: 1px solid black">
-                    <label>变动起来</label>                 
-                </div>
-                <div style="border: 1px solid black">
-                    <Table :columns="tblPublishColumns" :data="changesData"></Table>
-                </div>
-            </div>
             <div>
                 <Form ref="editChange" :model="editChange" :label-width="80" :rules="ruleUpdateValidate">
+                	<Form-item label="改动" >
+		                <div style="border: 1px solid black">
+		                    <Table :columns="tblPublishColumns" :data="changesData"></Table>
+		                </div>
+                    </Form-item>
                     <Form-item label="发布标题" prop="name">
                         <Input v-model="editChange.name" ></Input>
                     </Form-item>
@@ -83,7 +80,7 @@
             <div>
                 <Form ref="editFormNew" :model="editFormNew" :rules="ruleValidateNew" :label-width="80">
                     <Form-item label="命名空间" prop="namespace">
-                        <Input v-model="editFormNew.namespace" ></Input>
+                        <Input v-model="editFormNew.namespace" :disabled="isCommon == true || currNamespace != 'all' "></Input>
                     </Form-item>
                     <Form-item label="键" prop="key">
                         <Input v-model="editFormNew.key" ></Input>
@@ -131,6 +128,7 @@
 
 <script>
 	import moment from 'moment';
+	import api from '@/api/api';
 
 	export default {
 		props: {
@@ -191,7 +189,7 @@
                                             label: true,
                                             labelModify: true,
                                         },                              
-                                    }, "改"));                   
+                                    }, "改"));
                                 }
                                 return h('div', labels);
                             } else {
@@ -294,7 +292,7 @@
                                         },
                                         nativeOn: {
                                             click: () => {
-
+                                            	this.$Message.warning("暂不支持");
                                             }
                                         }                                    
                                     }),
@@ -417,7 +415,7 @@
                 //打开 modal 窗口
                 this.editModal = true;
                 //获取原数据
-                this.editForm = Object.assign({}, this.showData[index]);
+                this.editForm = Object.assign({}, this.configData[index]);
                 this.editIndex = index;
             },
             editSubmit(name) {
@@ -425,10 +423,10 @@
                     if (valid) {
                         this.editModal = false;
                         if (this.editIndex >= 0) {
-                            var id = this.showData[this.editIndex].id;
-                            for (var i = 0; i < this.configData.length; i++) {
-                                if (this.configData[i].id === id) {
-                                    this.configData[i].value = this.editForm.value;
+                            var id = this.configData[this.editIndex].id;
+                            for (var i = 0; i < this.rawConfig.length; i++) {
+                                if (this.rawConfig[i].id === id) {
+                                    this.rawConfig[i].value = this.editForm.value;
                                 }
                             }
                             this.editIndex = -1;
@@ -445,7 +443,7 @@
             },            
             showPublish() {
                 if (this.changesData.length == 0) {
-                    this.$Message.error('没有可供发布的修改，请先进行编辑修改后再提交发布!');
+                    this.$Message.warning('没有可供发布的修改，请先进行编辑修改后再提交发布!');
                     return;
                 }
                 this.editChangeModal = true;
@@ -454,17 +452,21 @@
             routeCreateNamespace() {
                 this.$router.push('/createNamespace');
             },
-            showNew(withNamespaceCommon) {
-                if (withNamespaceCommon == true) {
+            showNew() {
+                if (this.isCommon == true) {
                     this.editFormNew.namespace = "common";
                 } else {
-                    this.editFormNew.namespace = "";
+                	if (this.currNamespace != "all") {
+                		this.editFormNew.namespace = this.currNamespace;
+                	}
                 }
                 this.editModalNew = true;
             },
             editChangeSubmit(name) {
+            	console.log("editChangeSubmit: ", name);
                 this.$refs[name].validate((valid) => {
                     if (valid) {
+                    	console.log("valid");
                         if (this.changesData.length == 0) {
                             this.$Message.error("没有修改");
                             return;
@@ -498,13 +500,13 @@
                         api.changeConfig(reqpkg).then((response) => {
                            var succ_cnt = 0;
                             var fail_cnt = 0;
-                            console.log(response)
+                            console.log("api.changeConfig response: ", response)
                             if (Array.isArray(response.entries)) {
                                 succ_cnt = response.entries.length;
                                 for (var i = 0; i < succ_cnt; i++) {
                                     var entry = response.entries[i];
-                                    for (var j = 0; j < this.configData.length; j++) {
-                                        var data = this.configData[j]
+                                    for (var j = 0; j < this.rawConfig.length; j++) {
+                                        var data = this.rawConfig[j]
                                         if (data.namespace == entry.namespace && data.key == entry.key) {
                                             if (data.isnew == true) {
                                                 data.isnew = false;
@@ -534,6 +536,7 @@
                                 }
                             }                
                             this.$Message.info("成功: " + succ_cnt + " / " + (succ_cnt + fail_cnt));
+                            this.updateChanged();
                         }).catch((error) => {
                             this.$Message.error("失败：" + error);
                         });
@@ -562,10 +565,10 @@
                             updated: 0,
                             created: 0,
                         }
-                        //计算属性showdata会随着改变
-                        this.configData.unshift(config);
+                        //计算属性configData会随着改变
+                        this.rawConfig.unshift(config);
 
-                        this.updateChanged();                      
+                        this.updateChanged();
                     } else {
                         this.$Message.error('新增配置有错误，请更正!');
                     }
@@ -588,8 +591,8 @@
             },            
             updateChanged() {
                 this.changesData = [];
-                for (var i = 0; i < this.configData.length; i++) {
-                    var row = this.configData[i];
+                for (var i = 0; i < this.rawConfig.length; i++) {
+                    var row = this.rawConfig[i];
                     if (row.value != row.oldvalue) {
                         var entry = {
                             isnew: row.isnew,
@@ -668,6 +671,35 @@
         padding: 0;
     }
 
+
+    .tagReleased {
+        background-color: #A4A4A4;
+        padding: .2em .6em .3em;
+        font-size: 75%;
+        font-weight: bold;
+        line-height: 1;
+        color: #fff;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;        
+    }
+
+    .tagUnreleased {
+        background-color: #f0ad4e;
+        padding: .2em .6em .3em;
+        font-size: 75%;
+        font-weight: bold;
+        line-height: 1;
+        color: #fff;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;        
+    }
+
+    .opIcon {
+        cursor: pointer;
+        margin-right: 10px;
+    }
 
     .namespace-panel {
         background: #31708f;

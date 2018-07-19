@@ -25,7 +25,7 @@ export default {
 		return jsonHttp.post("/api/list", {});
 	},
 	changeConfig: (change) => {
-		return jsonHttp.post("api/change", change);
+		return jsonHttp.post("/api/change", change);
 	},
 	createNamespace: (namespace, author, desc) => {
 		return jsonHttp.post("/api/namespace/create", {namespace: namespace, comment: desc, author: author})
