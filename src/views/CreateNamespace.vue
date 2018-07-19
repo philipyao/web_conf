@@ -87,9 +87,9 @@
         			</div>
 
         			<div class="form-panel">
-					    <Form :module="formNamespace" :rules="ruleValidate" :label-width="80">
-					        <FormItem label="创建者" style="width: 300px" disabled>
-					            <Input v-model="formNamespace.author"></Input>
+					    <Form ref="formNamespace" :module="formNamespace" :rules="ruleValidate" :label-width="80">
+					        <FormItem label="创建者" style="width: 300px" >
+					            <Input v-model="formNamespace.author" disabled></Input>
 					        </FormItem>
 					        <FormItem label="名称" style="width: 400px">
 					            <Input v-model="formNamespace.name"></Input>
@@ -98,9 +98,9 @@
 					            <Input v-model="formNamespace.desc" type="textarea"></Input>
 					        </FormItem>
 					        <FormItem>
-					            <Button type="primary" >提交</Button>
+					            <Button type="primary" @click="submitNamespaceCreate('formNamespace')">提交</Button>
 					        </FormItem>
-					    </Form>          				
+					    </Form>
         			</div>
         		</div>
         	</div>
@@ -110,7 +110,8 @@
 
 <script>
     import Header from '@/components/Header';
-
+    import api from '@/api/api';
+    
     export default {
         name: 'createNamespace',
         components: {
@@ -118,7 +119,9 @@
         },
     	data () {
     		return {
-    			formNamespace: {},
+    			formNamespace: {
+                    author: this.$store.getters.account,
+                },
                 ruleValidate: {
                     name: [
                         { required: true, message: '请填写区间的名称！', trigger: 'blur' }
@@ -130,9 +133,27 @@
             backwards() {
             	this.$router.go(-1);
             },
+            submitNamespaceCreate(name) {
+                api.createNamespace(this.formNamespace.name, this.formNamespace.author, this.formNamespace.desc).then((response) => {
+                    console.log("api.createNamespace response: ", response);
+                }).catch((error) => {
+                    console.log("api.createNamespace error: ", error);
+                });
+
+                // console.log("name: ", name);
+                // this.$refs[name].validate((valid) => {
+                //     console.log("valid ", valid);
+                //     if (valid) {
+                //         api.createNamespace(this.formNamespace.name, this.formNamespace.author, this.formNamespace.desc).then((response) => {
+                //             console.log("api.createNamespace response: ", response);
+                //         }).catch((error) => {
+                //             console.log("api.createNamespace error: ", error);
+                //         });
+                //     } else {
+                //         this.$Message.error('新增私有空间有错误，请更正!');
+                //     }
+                // })
+            },
     	},
-        mounted() {
-        	this.formNamespace.author = this.$store.getters.account;
-        }
     }
 </script>
