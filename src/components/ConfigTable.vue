@@ -123,6 +123,27 @@
             </div>
         </Modal>
 
+        <!--新建 namespace 对话框-->
+        <Modal v-model="showCreateNamespace" title="新增作用区间（私有）" >
+            <div>
+                <Form ref="createNamespaceForm" :model="createNamespaceForm" :rules="ruleValidateCN" :label-width="80">
+                    <Form-item label="命名空间" prop="namespace">
+                        <Input v-model="createNamespaceForm.namespace" ></Input>
+                    </Form-item>
+                    <Form-item label="创建人" prop="author">
+                        <Input v-model="createNamespaceForm.author" disabled></Input>
+                    </Form-item>
+                    <Form-item label="备注说明">
+                        <Input v-model="createNamespaceForm.desc" type="textarea" :autosize="{minRows: 1,maxRows: 2}"></Input>
+                    </Form-item>
+                </Form>
+            </div>
+            <div slot="footer">
+                <Button type="primary" @click="submitCreateNamespace('createNamespaceForm')">确定</Button>
+                <Button type="ghost" @click="showCreateNamespace = false;" style="margin-left: 8px">取消</Button>
+            </div>
+        </Modal>
+
 	</div>
 </template>
 
@@ -161,6 +182,11 @@
                 editFormNew: {},
                 editModalNew: false,
 
+                //新增配置空间
+                createNamespaceForm: {
+                	author: this.$store.getters.account,
+                },
+                showCreateNamespace: false,
 
                 tblColumns: [ 
                     {
@@ -365,6 +391,15 @@
                         { required: true, message: '请设置配置的值！', trigger: 'blur' }
                     ],
                 },    
+                ruleValidateCN: {
+                    namespace: [
+                        { required: true, message: '请填写区间的名称！', trigger: 'blur' }
+                    ],
+                    author: [
+                        { required: true, message: '填写作者！', trigger: 'blur' }
+                    ],
+                },
+
 		    }
 	    },
         computed: {
@@ -440,7 +475,27 @@
             },
             editCancel() {
                 this.editModal = false;
-            },            
+            },      
+            submitCreateNamespace(name) {
+                console.log("submitCreateNamespace: ", name);
+                this.$refs[name].validate((valid) => {
+                    console.log("valid: ", valid);
+                    if (valid) {
+                        this.showCreateNamespace = false;
+                        if (this.isCommon == true) {
+                        	return
+                        }
+		                api.createNamespace(this.createNamespaceForm.namespace, this.createNamespaceForm.author, this.createNamespaceForm.desc).then((response) => {
+		                    console.log("api.createNamespace response: ", response);
+		                    this.rawNamespace.push(this.createNamespaceForm.namespace);
+		                }).catch((error) => {
+		                    console.log("api.createNamespace error: ", error);
+		                });
+                    } else {
+                        this.$Message.error('编辑配置有错误，请更正!');
+                    }
+                })
+            },      
             showPublish() {
                 if (this.changesData.length == 0) {
                     this.$Message.warning('没有可供发布的修改，请先进行编辑修改后再提交发布!');
@@ -450,7 +505,7 @@
                 this.editChange.author = this.$store.getters.account;
             },
             routeCreateNamespace() {
-                this.$router.push('/createNamespace');
+                this.showCreateNamespace = true;
             },
             showNew() {
                 if (this.isCommon == true) {
